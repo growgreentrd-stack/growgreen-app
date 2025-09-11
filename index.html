@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grow Green Trading Co.</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f8f9fa;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    /* Banner Top */
+    .banner {
+      width: 100%;
+      height: 300px; /* keep like banner */
+      object-fit: cover;
+      object-position: top; /* show top part */
+      display: block;
+    }
+    .container {
+      flex: 1;
+      text-align: center;
+      padding: 20px;
+    }
+    input {
+      padding: 10px;
+      width: 250px;
+      margin: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    button {
+      padding: 10px 20px;
+      background: #006633;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover {
+      background: #004d26;
+    }
+    #result {
+      margin-top: 20px;
+    }
+    footer {
+      text-align: center;
+      padding: 12px;
+      background: #006633;
+      color: white;
+      margin-top: auto;
+    }
+    /* Scanner box */
+    #reader {
+      width: 300px;
+      margin: 20px auto;
+      display: none; /* hidden until scan clicked */
+    }
+  </style>
+  <!-- QR/Barcode Scanner Library -->
+  <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
+</head>
+<body>
+
+  <!-- Banner -->
+  <img src="Banner.png" alt="Grow Green Banner" class="banner">
+
+  <!-- Main Section -->
+  <div class="container">
+    <h2>Find Your Product</h2>
+    <input type="text" id="barcodeInput" placeholder="Enter Barcode...">
+    <button onclick="searchProduct()">Search</button>
+    <button onclick="startScan()">Scan</button>
+    <div id="reader"></div>
+    <div id="result"></div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    © GrowGreen Sabya Jazan Kingdom of Saudi Arabia. All Rights Reserved.
+  </footer>
+
+  <!-- Script to Load Data -->
+  <script>
+    const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRu6hZTngMj7EE0n9yFCh43Fvlh9RORRSxZECqv0qgnc7YF4Uv8XEDNcQhwJfkD9IVimpmdtWOkiHt0/pub?output=csv";
+
+    let allProducts = [];
+
+    async function loadProducts() {
+      const response = await fetch(sheetURL);
+      const data = await response.text();
+      allProducts = data.split("\n").map(r => r.split(","));
+    }
+    loadProducts();
+
+    function searchProduct(barcodeInput) {
+      const barcode = barcodeInput || document.getElementById("barcodeInput").value.trim();
+      const resultDiv = document.getElementById("result");
+      resultDiv.innerHTML = "";
+      const product = allProducts.find(row => row[0] === barcode);
+      if (product) {
+        resultDiv.innerHTML = `<h3>Product Found:</h3>
+          <p><b>Name:</b> ${product[1]}</p>
+          <p><b>Qty:</b> ${product[2]}</p>
+          <p><b>Unit:</b> ${product[3]}</p>
+          <p><b>Magas:</b> ${product[4]}</p>
+          <p><b>MRP:</b> ${product[5]}</p>
+          <p><b>Brand:</b> ${product[6]}</p>
+          <p><b>Usage:</b> ${product[7]}</p>`;
+      } else {
+        resultDiv.innerHTML = "<p style='color:red;'>No product found for this barcode.</p>";
+      }
+    }
+
+    // Start QR/Barcode Scanner
+    function startScan() {
+      document.getElementById("reader").style.display = "block";
+      const html5QrCode = new Html5Qrcode("reader");
+      html5QrCode.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 250 },
+        (decodedText) => {
+          html5QrCode.stop();
+          document.getElementById("reader").style.display = "none";
+          searchProduct(decodedText.trim());
+        },
+        (errorMessage) => {
+          // ignore scanning errors
+        }
+      ).catch(err => {
+        alert("Camera error: " + err);
+      });
+    }
+  </script>
+</body>
+</html>

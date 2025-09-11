@@ -3,26 +3,36 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>QR Test</title>
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
+  <title>QR Code Scanner</title>
+  <!-- Load Html5Qrcode from CDN -->
+  <script src="https://unpkg.com/html5-qrcode@2.0.9/dist/html5-qrcode.min.js"></script>
 </head>
 <body>
-  <h2>QR Code Scanner Test</h2>
-  <div id="reader" style="width:300px"></div>
-  <p id="result"></p>
+  <h2>QR Code Scanner</h2>
+
+  <!-- Scanner placeholder -->
+  <div id="qr-reader" style="width: 600px; max-width: 100%;"></div>
+  <div id="qr-reader-results"></div>
 
   <script>
-    const html5QrCode = new Html5Qrcode("reader");
-    html5QrCode.start(
-      { facingMode: "environment" },
-      { fps: 10, qrbox: { width: 250, height: 250 } },
-      (decodedText) => {
-        document.getElementById("result").innerText = "Scanned: " + decodedText;
-      },
-      (errorMessage) => {}
-    ).catch(err => {
-      document.getElementById("result").innerText = "Error: " + err;
-    });
+    // Success callback
+    function onScanSuccess(decodedText, decodedResult) {
+      // Show result
+      document.getElementById("qr-reader-results").innerText =
+        `Scanned result: ${decodedText}`;
+      console.log("Decoded result:", decodedResult);
+    }
+
+    // Create the scanner
+    const html5QrcodeScanner = new Html5QrcodeScanner(
+      "qr-reader",
+      {
+        fps: 10,
+        qrbox: 250
+      }
+    );
+    // Render the UI
+    html5QrcodeScanner.render(onScanSuccess);
   </script>
 </body>
 </html>

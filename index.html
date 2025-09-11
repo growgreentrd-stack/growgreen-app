@@ -89,7 +89,7 @@
       width: 100%;
       max-width: 350px;
       margin: 20px auto;
-      display: none; /* hidden until scan clicked */
+      display: none;
     }
 
     footer {
@@ -112,7 +112,7 @@
     <div class="search-box">
       <input type="text" id="searchInput" placeholder="Enter Barcode" />
       <button onclick="searchProduct()">Search</button>
-      <button onclick="openScanner()">Scan</button>
+      <button onclick="startScan()">Scan</button>
     </div>
 
     <!-- QR Scanner -->
@@ -177,31 +177,39 @@
       }
     }
 
-    let scannerRunning = false;
-    let html5QrcodeScanner;
+    let html5QrCode;
 
-    function openScanner() {
+    async function startScan() {
       const qrReader = document.getElementById("qr-reader");
+      qrReader.style.display = "block";
 
-      if (!scannerRunning) {
-        qrReader.style.display = "block";
-        html5QrcodeScanner = new Html5QrcodeScanner("qr-reader", {
-          fps: 10,
-          qrbox: 250,
-        });
+      // Create scanner instance
+      html5QrCode = new Html5Qrcode("qr-reader");
 
-        html5QrcodeScanner.render((decodedText) => {
-          showProduct(decodedText);
-          html5QrcodeScanner.clear(); // stop scanner after success
-          qrReader.style.display = "none";
-          scannerRunning = false;
-        });
+      try {
+        const cameras = await Html5Qrcode.getCameras();
+        if (cameras && cameras.length) {
+          let backCamera = cameras[cameras.length - 1].id; // last one is usually back
+          await html5QrCode.start(
+            { deviceId: { exact: backCamera } },
+            { fps: 10, qrbox: 250 },
+            (decodedText) => {
+              showProduct(decodedText);
+              stopScan();
+            }
+          );
+        }
+      } catch (err) {
+        console.error("Camera error:", err);
+        alert("Unable to access camera: " + err);
+      }
+    }
 
-        scannerRunning = true;
-      } else {
-        html5QrcodeScanner.clear();
-        qrReader.style.display = "none";
-        scannerRunning = false;
+    async function stopScan() {
+      if (html5QrCode) {
+        await html5QrCode.stop();
+        html5QrCode.clear();
+        document.getElementById("qr-reader").style.display = "none";
       }
     }
   </script>

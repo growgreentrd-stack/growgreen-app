@@ -1,131 +1,207 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GrowGreen Product Info</title>
-  <!-- QR Scanner Library (fixed link) -->
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GrowGreen App</title>
+
+  <!-- Load QR Scanner library -->
+  <script src="https://unpkg.com/html5-qrcode@2.0.9/dist/html5-qrcode.min.js"></script>
+
   <style>
     body {
+      margin: 0;
       font-family: Arial, sans-serif;
-      margin: 0; padding: 0;
-      display: flex; flex-direction: column;
+      display: flex;
+      flex-direction: column;
       min-height: 100vh;
       background: #f9f9f9;
     }
-    .banner {
-      width: 100%; max-height: 120px; object-fit: cover;
+
+    header img {
+      width: 100%;
+      max-height: 120px;
+      object-fit: cover;
+      display: block;
     }
-    main { flex: 1; padding: 20px; text-align: center; }
-    input, button {
-      padding: 10px; margin: 5px;
-      border-radius: 8px; border: 1px solid #ccc;
-      font-size: 16px;
+
+    main {
+      flex: 1;
+      padding: 15px;
+      text-align: center;
     }
-    button { background: #4CAF50; color: white; cursor: pointer; }
-    button:hover { background: #45a049; }
-    .result {
-      background: #fff; border-radius: 10px; padding: 15px;
-      margin-top: 20px; text-align: left;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      width: fit-content; margin-left: auto; margin-right: auto;
+
+    .search-box {
+      margin: 15px 0;
     }
-    .result p { margin: 6px 0; }
-    .result strong {
-      display: inline-block;
-      width: 100px; /* Align all colons */
+
+    input[type="text"] {
+      padding: 10px;
+      width: 65%;
+      max-width: 300px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
     }
+
+    button {
+      padding: 10px 20px;
+      margin-left: 8px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      background: #4caf50;
+      color: white;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background: #43a047;
+    }
+
+    #result {
+      margin-top: 20px;
+      background: #ffffff;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+      text-align: left;
+      display: none;
+    }
+
+    #result h3 {
+      margin-top: 0;
+      border-bottom: 2px solid #e0e0e0;
+      padding-bottom: 5px;
+    }
+
+    #result .row {
+      display: flex;
+      justify-content: flex-start;
+      padding: 4px 0;
+    }
+
+    #result .row span.label {
+      width: 120px;
+      font-weight: bold;
+    }
+
+    #qr-reader {
+      width: 100%;
+      max-width: 350px;
+      margin: 20px auto;
+      display: none; /* hidden until scan clicked */
+    }
+
     footer {
-      background: #222; color: #fff;
-      text-align: center; padding: 10px;
+      background: #333;
+      color: white;
+      text-align: center;
+      padding: 10px;
+      margin-top: auto;
     }
-    #reader { width: 300px; margin: 15px auto; display: none; }
   </style>
 </head>
 <body>
-  <img src="Banner.png" alt="Banner" class="banner">
+  <!-- Banner -->
+  <header>
+    <img src="Banner.png" alt="GrowGreen Banner" />
+  </header>
 
   <main>
-    <h2>Search Product</h2>
-    <input type="text" id="barcodeInput" placeholder="Enter Barcode">
-    <button onclick="searchProduct()">Search</button>
-    <button onclick="startScan()">Scan</button>
+    <!-- Search box -->
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="Enter Barcode" />
+      <button onclick="searchProduct()">Search</button>
+      <button onclick="openScanner()">Scan</button>
+    </div>
 
-    <div id="reader"></div>
-    <div id="result" class="result"></div>
+    <!-- QR Scanner -->
+    <div id="qr-reader"></div>
+
+    <!-- Product result -->
+    <div id="result">
+      <h3>Product Details</h3>
+      <div id="details"></div>
+    </div>
   </main>
 
+  <!-- Footer -->
   <footer>
     © GrowGreen Sabya Jazan Kingdom of Saudi Arabia. All Rights Reserved.
   </footer>
 
   <script>
-    // Fetch Google Sheet Data
-    let sheetData = [];
-    fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vRu6hZTngMj7EE0n9yFCh43Fvlh9RORRSxZECqv0qgnc7YF4Uv8XEDNcQhwJfkD9IVimpmdtWOkiHt0/pub?output=csv")
-      .then(res => res.text())
-      .then(csv => {
-        let rows = csv.split("\n").map(r => r.split(","));
-        let headers = rows.shift();
-        sheetData = rows.map(r => {
-          let obj = {};
-          headers.forEach((h,i) => obj[h.trim()] = r[i] ? r[i].trim() : "");
-          return obj;
-        });
-      });
+    // Example product inventory
+    const inventory = {
+      "123456": {
+        name: "Organic Apple",
+        price: "5 SAR",
+        stock: "In Stock",
+        category: "Fruits",
+      },
+      "987654": {
+        name: "Fresh Milk",
+        price: "12 SAR",
+        stock: "Limited",
+        category: "Dairy",
+      },
+    };
 
-    // Capitalize first letters
-    function toTitleCase(str) {
-      return str.replace(/\w\S*/g, (txt) => 
-        txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
+    function formatText(text) {
+      return text.replace(/\b\w/g, (c) => c.toUpperCase());
     }
 
-    function showProduct(product) {
-      if (!product) {
-        document.getElementById("result").innerHTML = "<p>No product found</p>";
-        return;
+    function showProduct(code) {
+      const product = inventory[code];
+      const resultBox = document.getElementById("result");
+      const details = document.getElementById("details");
+
+      if (product) {
+        details.innerHTML = `
+          <div class="row"><span class="label">Name:</span> <span>${formatText(product.name)}</span></div>
+          <div class="row"><span class="label">Price:</span> <span>${product.price}</span></div>
+          <div class="row"><span class="label">Stock:</span> <span>${product.stock}</span></div>
+          <div class="row"><span class="label">Category:</span> <span>${product.category}</span></div>
+        `;
+        resultBox.style.display = "block";
+      } else {
+        details.innerHTML = `<div class="row">No product found for code: ${code}</div>`;
+        resultBox.style.display = "block";
       }
-      document.getElementById("result").innerHTML = `
-        <p><strong>Barcode:</strong> ${product["Barcode"]}</p>
-        <p><strong>Name:</strong> ${toTitleCase(product["Product Name"])}</p>
-        <p><strong>Qty:</strong> ${product["Qty"]} ${product["Unit"]}</p>
-        <p><strong>MRP:</strong> ${product["MRP"]}</p>
-        <p><strong>Brand:</strong> ${toTitleCase(product["Brand"])}</p>
-        <p><strong>Usage:</strong> ${toTitleCase(product["Usage"])}</p>
-      `;
     }
 
     function searchProduct() {
-      let code = document.getElementById("barcodeInput").value.trim();
-      let found = sheetData.find(p => p["Barcode"] === code);
-      showProduct(found);
+      const code = document.getElementById("searchInput").value.trim();
+      if (code) {
+        showProduct(code);
+      }
     }
 
-    // QR Scanner
-    let html5QrCode;
-    function startScan() {
-      document.getElementById("reader").style.display = "block";
-      if (!html5QrCode) {
-        html5QrCode = new Html5Qrcode("reader");
-      }
-      html5QrCode.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        (decodedText) => {
-          document.getElementById("barcodeInput").value = decodedText;
-          searchProduct();
-          stopScan();
-        }
-      ).catch(err => {
-        alert("Camera not available or permission denied: " + err);
-      });
-    }
-    function stopScan() {
-      if (html5QrCode) {
-        html5QrCode.stop().then(() => {
-          document.getElementById("reader").style.display = "none";
+    let scannerRunning = false;
+    let html5QrcodeScanner;
+
+    function openScanner() {
+      const qrReader = document.getElementById("qr-reader");
+
+      if (!scannerRunning) {
+        qrReader.style.display = "block";
+        html5QrcodeScanner = new Html5QrcodeScanner("qr-reader", {
+          fps: 10,
+          qrbox: 250,
         });
+
+        html5QrcodeScanner.render((decodedText) => {
+          showProduct(decodedText);
+          html5QrcodeScanner.clear(); // stop scanner after success
+          qrReader.style.display = "none";
+          scannerRunning = false;
+        });
+
+        scannerRunning = true;
+      } else {
+        html5QrcodeScanner.clear();
+        qrReader.style.display = "none";
+        scannerRunning = false;
       }
     }
   </script>

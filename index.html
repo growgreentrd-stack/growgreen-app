@@ -15,10 +15,10 @@
       flex-direction: column;
       min-height: 100vh;
     }
-    /* Banner Top */
+    /* Banner */
     .banner {
       width: 100%;
-      height: 300px; /* keep like banner */
+      height: 150px; /* like banner */
       object-fit: cover;
       object-position: top; /* show top part */
       display: block;
@@ -56,12 +56,44 @@
       background: #006633;
       color: white;
       margin-top: auto;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+    }
+    /* Product details box */
+    .product-details {
+      background-color: #f9f9f9;
+      padding: 15px;
+      margin: 15px auto;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 500px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    .product-details table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .product-details td {
+      padding: 6px 4px;
+      text-transform: capitalize; /* auto capitalize */
+    }
+    .product-details td:first-child {
+      width: 35%;
+      font-weight: bold;
+      text-align: right;
+      padding-right: 10px;
+    }
+    .product-details td:first-child::after {
+      content: ":";
+      margin-left: 5px;
     }
     /* Scanner box */
     #reader {
       width: 300px;
       margin: 20px auto;
-      display: none; /* hidden until scan clicked */
+      display: none; /* hidden until scan */
     }
   </style>
   <!-- QR/Barcode Scanner Library -->
@@ -87,7 +119,7 @@
     © GrowGreen Sabya Jazan Kingdom of Saudi Arabia. All Rights Reserved.
   </footer>
 
-  <!-- Script to Load Data -->
+  <!-- Script -->
   <script>
     const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRu6hZTngMj7EE0n9yFCh43Fvlh9RORRSxZECqv0qgnc7YF4Uv8XEDNcQhwJfkD9IVimpmdtWOkiHt0/pub?output=csv";
 
@@ -100,22 +132,32 @@
     }
     loadProducts();
 
+    function formatDetails(product) {
+      return `
+        <div class="product-details">
+          <table>
+            <tr><td>Barcode</td><td>${product[0]}</td></tr>
+            <tr><td>Name</td><td>${product[1]}</td></tr>
+            <tr><td>Qty</td><td>${product[2]}</td></tr>
+            <tr><td>Unit</td><td>${product[3]}</td></tr>
+            <tr><td>Magas</td><td>${product[4]}</td></tr>
+            <tr><td>MRP</td><td>${product[5]}</td></tr>
+            <tr><td>Brand</td><td>${product[6]}</td></tr>
+            <tr><td>Usage</td><td>${product[7]}</td></tr>
+          </table>
+        </div>
+      `;
+    }
+
     function searchProduct(barcodeInput) {
       const barcode = barcodeInput || document.getElementById("barcodeInput").value.trim();
       const resultDiv = document.getElementById("result");
       resultDiv.innerHTML = "";
       const product = allProducts.find(row => row[0] === barcode);
       if (product) {
-        resultDiv.innerHTML = `<h3>Product Found:</h3>
-          <p><b>Name:</b> ${product[1]}</p>
-          <p><b>Qty:</b> ${product[2]}</p>
-          <p><b>Unit:</b> ${product[3]}</p>
-          <p><b>Magas:</b> ${product[4]}</p>
-          <p><b>MRP:</b> ${product[5]}</p>
-          <p><b>Brand:</b> ${product[6]}</p>
-          <p><b>Usage:</b> ${product[7]}</p>`;
+        resultDiv.innerHTML = formatDetails(product);
       } else {
-        resultDiv.innerHTML = "<p style='color:red;'>No product found for this barcode.</p>";
+        resultDiv.innerHTML = "<p style='color:red;'>❌ No product found</p>";
       }
     }
 
@@ -132,7 +174,7 @@
           searchProduct(decodedText.trim());
         },
         (errorMessage) => {
-          // ignore scanning errors
+          // ignore errors
         }
       ).catch(err => {
         alert("Camera error: " + err);

@@ -135,7 +135,7 @@
 
     // Load data from Google Sheets (OpenSheet API)
     async function loadInventory() {
-      const sheetUrl = "https://opensheet.elk.sh/1O0vlldmzxvOqJQ5Ko9OqmVLrk-RjGUilxVSnwKmuvXc/Inventory";
+      const sheetUrl = "https://opensheet.elk.sh/1O0vlldmzxvOqJQ5Ko9OqmVLrk-RjGUilxVSnwKmuvXc/1";
       try {
         const res = await fetch(sheetUrl);
         const data = await res.json();
@@ -232,5 +232,6 @@
   </script>
 </body>
 </html>
+
 
 

@@ -6,7 +6,7 @@
   <title>GrowGreen App</title>
 
   <!-- Load QR Scanner library -->
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.0.9/dist/html5-qrcode.min.js"></script>
 
   <style>
     body {
@@ -131,36 +131,39 @@
   </footer>
 
   <script>
-    let inventory = {}; // will load from Google Sheet
-    let html5QrCode;
+    const inventory = {};
 
-    // Load Google Sheet as JSON
+    // Load data from Google Sheets (OpenSheet API)
     async function loadInventory() {
+      const sheetUrl = "https://opensheet.elk.sh/2PACX-1vRu6hZTngMj7EE0n9yFCh43Fvlh9RORRSxZECqv0qgnc7YF4Uv8XEDNcQhwJfkD9IVimpmdtWOkiHt0/Inventory";
       try {
-        // Convert your published sheet to JSON using opensheet
-        const sheetUrl = "https://opensheet.elk.sh/2PACX-1vRu6hZTngMj7EE0n9yFCh43Fvlh9RORRSxZECqv0qgnc7YF4Uv8XEDNcQhwJfkD9IVimpmdtWOkiHt0/1";
         const res = await fetch(sheetUrl);
         const data = await res.json();
 
-        // Expecting columns: Barcode, Name, Price, Stock, Category
         data.forEach(row => {
           if (row.Barcode) {
             inventory[row.Barcode.trim()] = {
-              name: row.Name || "",
-              price: row.Price || "",
-              stock: row.Stock || "",
-              category: row.Category || ""
+              name: row["Product Name"] || "",
+              qty: row["Qty"] || "",
+              unit: row["Unit"] || "",
+              magas: row["Magas"] || "",
+              mrp: row["MRP"] || "",
+              brand: row["Brand"] || "",
+              usage: row["Usage"] || ""
             };
           }
         });
-        console.log("Inventory loaded:", inventory);
+
+        console.log("✅ Inventory loaded:", inventory);
       } catch (err) {
-        console.error("Error loading sheet:", err);
+        console.error("❌ Error loading inventory:", err);
       }
     }
 
+    loadInventory();
+
     function formatText(text) {
-      return text ? text.replace(/\b\w/g, c => c.toUpperCase()) : "";
+      return text.replace(/\b\w/g, (c) => c.toUpperCase());
     }
 
     function showProduct(code) {
@@ -171,14 +174,18 @@
       if (product) {
         details.innerHTML = `
           <div class="row"><span class="label">Name:</span> <span>${formatText(product.name)}</span></div>
-          <div class="row"><span class="label">Price:</span> <span>${product.price}</span></div>
-          <div class="row"><span class="label">Stock:</span> <span>${product.stock}</span></div>
-          <div class="row"><span class="label">Category:</span> <span>${product.category}</span></div>
+          <div class="row"><span class="label">Qty:</span> <span>${product.qty}</span></div>
+          <div class="row"><span class="label">Unit:</span> <span>${product.unit}</span></div>
+          <div class="row"><span class="label">Magas:</span> <span>${product.magas}</span></div>
+          <div class="row"><span class="label">MRP:</span> <span>${product.mrp}</span></div>
+          <div class="row"><span class="label">Brand:</span> <span>${formatText(product.brand)}</span></div>
+          <div class="row"><span class="label">Usage:</span> <span>${formatText(product.usage)}</span></div>
         `;
+        resultBox.style.display = "block";
       } else {
         details.innerHTML = `<div class="row">No product found for code: ${code}</div>`;
+        resultBox.style.display = "block";
       }
-      resultBox.style.display = "block";
     }
 
     function searchProduct() {
@@ -187,6 +194,8 @@
         showProduct(code);
       }
     }
+
+    let html5QrCode;
 
     async function startScan() {
       const qrReader = document.getElementById("qr-reader");
@@ -202,7 +211,7 @@
             { deviceId: { exact: backCamera } },
             { fps: 10, qrbox: 250 },
             (decodedText) => {
-              showProduct(decodedText.trim());
+              showProduct(decodedText);
               stopScan();
             }
           );
@@ -220,10 +229,6 @@
         document.getElementById("qr-reader").style.display = "none";
       }
     }
-
-    // Load sheet on page load
-    loadInventory();
   </script>
 </body>
 </html>
-

@@ -6,7 +6,7 @@
   <title>GrowGreen App</title>
 
   <!-- Load QR Scanner library -->
-  <script src="https://unpkg.com/html5-qrcode@2.0.9/dist/html5-qrcode.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
   <style>
     body {
@@ -131,24 +131,36 @@
   </footer>
 
   <script>
-    // Example product inventory
-    const inventory = {
-      "123456": {
-        name: "Organic Apple",
-        price: "5 SAR",
-        stock: "In Stock",
-        category: "Fruits",
-      },
-      "987654": {
-        name: "Fresh Milk",
-        price: "12 SAR",
-        stock: "Limited",
-        category: "Dairy",
-      },
-    };
+    let inventory = {}; // will load from Google Sheet
+    let html5QrCode;
+
+    // Load Google Sheet as JSON
+    async function loadInventory() {
+      try {
+        // Convert your published sheet to JSON using opensheet
+        const sheetUrl = "https://opensheet.elk.sh/2PACX-1vRu6hZTngMj7EE0n9yFCh43Fvlh9RORRSxZECqv0qgnc7YF4Uv8XEDNcQhwJfkD9IVimpmdtWOkiHt0/Sheet1";
+        const res = await fetch(sheetUrl);
+        const data = await res.json();
+
+        // Expecting columns: Barcode, Name, Price, Stock, Category
+        data.forEach(row => {
+          if (row.Barcode) {
+            inventory[row.Barcode.trim()] = {
+              name: row.Name || "",
+              price: row.Price || "",
+              stock: row.Stock || "",
+              category: row.Category || ""
+            };
+          }
+        });
+        console.log("Inventory loaded:", inventory);
+      } catch (err) {
+        console.error("Error loading sheet:", err);
+      }
+    }
 
     function formatText(text) {
-      return text.replace(/\b\w/g, (c) => c.toUpperCase());
+      return text ? text.replace(/\b\w/g, c => c.toUpperCase()) : "";
     }
 
     function showProduct(code) {
@@ -163,11 +175,10 @@
           <div class="row"><span class="label">Stock:</span> <span>${product.stock}</span></div>
           <div class="row"><span class="label">Category:</span> <span>${product.category}</span></div>
         `;
-        resultBox.style.display = "block";
       } else {
         details.innerHTML = `<div class="row">No product found for code: ${code}</div>`;
-        resultBox.style.display = "block";
       }
+      resultBox.style.display = "block";
     }
 
     function searchProduct() {
@@ -177,24 +188,21 @@
       }
     }
 
-    let html5QrCode;
-
     async function startScan() {
       const qrReader = document.getElementById("qr-reader");
       qrReader.style.display = "block";
 
-      // Create scanner instance
       html5QrCode = new Html5Qrcode("qr-reader");
 
       try {
         const cameras = await Html5Qrcode.getCameras();
         if (cameras && cameras.length) {
-          let backCamera = cameras[cameras.length - 1].id; // last one is usually back
+          let backCamera = cameras[cameras.length - 1].id;
           await html5QrCode.start(
             { deviceId: { exact: backCamera } },
             { fps: 10, qrbox: 250 },
             (decodedText) => {
-              showProduct(decodedText);
+              showProduct(decodedText.trim());
               stopScan();
             }
           );
@@ -212,6 +220,9 @@
         document.getElementById("qr-reader").style.display = "none";
       }
     }
+
+    // Load sheet on page load
+    loadInventory();
   </script>
 </body>
 </html>

@@ -41,11 +41,12 @@
       max-width: 300px;
       border: 1px solid #ccc;
       border-radius: 5px;
+      margin-bottom: 12px; /* ✅ Added spacing below input */
     }
 
     button {
       padding: 10px 20px;
-      margin-left: 8px;
+      margin: 5px;
       border: none;
       border-radius: 5px;
       cursor: pointer;
@@ -62,10 +63,10 @@
       margin-top: 20px;
       background: #ffffff;
       padding: 15px;
-      border-radius: 8px;
+      border-radius: 12px;
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-      text-align: left;
       display: none;
+      text-align: center;
     }
 
     #result h3 {
@@ -74,10 +75,24 @@
       padding-bottom: 5px;
     }
 
+    #productImage {
+      width: 90px;
+      height: auto;
+      margin-bottom: 8px;
+    }
+
+    .priceHighlight {
+      font-size: 22px;
+      font-weight: bold;
+      color: #1a8917;
+      margin-bottom: 12px;
+    }
+
     #result .row {
       display: flex;
       justify-content: flex-start;
       padding: 4px 0;
+      text-align: left;
     }
 
     #result .row span.label {
@@ -85,10 +100,15 @@
       font-weight: bold;
     }
 
+    /* Stylish scanner frame */
     #qr-reader {
       width: 100%;
       max-width: 350px;
+      height: 250px;
       margin: 20px auto;
+      border: 4px solid #1a8917;
+      border-radius: 20px;
+      overflow: hidden;
       display: none;
     }
 
@@ -111,8 +131,9 @@
     <!-- Search box -->
     <div class="search-box">
       <input type="text" id="searchInput" placeholder="Enter Barcode" />
+      <br />
       <button onclick="searchProduct()">Search</button>
-      <button onclick="startScan()">Scan</button>
+      <button onclick="toggleScan()">Scan</button>
     </div>
 
     <!-- QR Scanner -->
@@ -121,6 +142,8 @@
     <!-- Product result -->
     <div id="result">
       <h3>Product Details</h3>
+      <img id="productImage" src="" alt="Product Image" style="display:none;" />
+      <div class="priceHighlight" id="productPrice"></div>
       <div id="details"></div>
     </div>
   </main>
@@ -132,64 +155,78 @@
 
   <script>
     const inventory = {};
+    let html5QrCode;
+    let scanning = false;
 
     // Load data from Google Sheets (OpenSheet API)
     async function loadInventory() {
-  const sheetUrl = "https://opensheet.elk.sh/1O0vlldmzxvOqJQ5Ko9OqmVLrk-RjGUilxVSnwKmuvXc/Inventory";
-  try {
-    const res = await fetch(sheetUrl);
-    const data = await res.json();
+      const sheetUrl = "https://opensheet.elk.sh/1O0vlldmzxvOqJQ5Ko9OqmVLrk-RjGUilxVSnwKmuvXc/Inventory";
+      try {
+        const res = await fetch(sheetUrl);
+        const data = await res.json();
 
-    data.forEach(row => {
-      // Trim all keys before using
-      const cleanedRow = {};
-      Object.keys(row).forEach(k => {
-        cleanedRow[k.trim()] = row[k].trim();
-      });
+        data.forEach(row => {
+          const cleanedRow = {};
+          Object.keys(row).forEach(k => {
+            cleanedRow[k.trim()] = row[k] ? row[k].trim() : "";
+          });
 
-      if (cleanedRow.Barcode) {
-        inventory[cleanedRow.Barcode] = {
-          name: cleanedRow["Product Name"] || "",
-          qty: cleanedRow["Qty"] || "",
-          unit: cleanedRow["Unit"] || "",
-          magas: cleanedRow["Magas"] || "",
-          mrp: cleanedRow["MRP"] || "",
-          brand: cleanedRow["Brand"] || "",
-          usage: cleanedRow["Usage"] || ""
-        };
+          if (cleanedRow.Barcode) {
+            inventory[cleanedRow.Barcode] = {
+              name: cleanedRow["Product Name"] || "",
+              qty: cleanedRow["Qty"] || "",
+              unit: cleanedRow["Unit"] || "",
+              magas: cleanedRow["Magas"] || "",
+              mrp: cleanedRow["MRP"] || "",
+              brand: cleanedRow["Brand"] || "",
+              usage: cleanedRow["Usage"] || "",
+              image: cleanedRow["Image"] || "" // ✅ If you add image column in sheet
+            };
+          }
+        });
+
+        console.log("✅ Inventory loaded:", inventory);
+      } catch (err) {
+        console.error("❌ Error loading inventory:", err);
       }
-    });
-
-    console.log("✅ Inventory loaded:", inventory);
-  } catch (err) {
-    console.error("❌ Error loading inventory:", err);
-  }
-}
+    }
 
     loadInventory();
 
     function formatText(text) {
-      return text.replace(/\b\w/g, (c) => c.toUpperCase());
+      return text ? text.replace(/\b\w/g, (c) => c.toUpperCase()) : "";
     }
 
     function showProduct(code) {
       const product = inventory[code];
       const resultBox = document.getElementById("result");
       const details = document.getElementById("details");
+      const productImage = document.getElementById("productImage");
+      const productPrice = document.getElementById("productPrice");
 
       if (product) {
+        if (product.image) {
+          productImage.src = product.image;
+          productImage.style.display = "block";
+        } else {
+          productImage.style.display = "none";
+        }
+
+        productPrice.innerText = product.mrp ? `﷼ ${product.mrp}` : "";
+
         details.innerHTML = `
           <div class="row"><span class="label">Name:</span> <span>${formatText(product.name)}</span></div>
           <div class="row"><span class="label">Qty:</span> <span>${product.qty}</span></div>
           <div class="row"><span class="label">Unit:</span> <span>${product.unit}</span></div>
           <div class="row"><span class="label">Magas:</span> <span>${product.magas}</span></div>
-          <div class="row"><span class="label">MRP:</span> <span>${product.mrp}</span></div>
           <div class="row"><span class="label">Brand:</span> <span>${formatText(product.brand)}</span></div>
           <div class="row"><span class="label">Usage:</span> <span>${formatText(product.usage)}</span></div>
         `;
         resultBox.style.display = "block";
       } else {
         details.innerHTML = `<div class="row">No product found for code: ${code}</div>`;
+        productImage.style.display = "none";
+        productPrice.innerText = "";
         resultBox.style.display = "block";
       }
     }
@@ -201,46 +238,40 @@
       }
     }
 
-    let html5QrCode;
-
-    async function startScan() {
+    async function toggleScan() {
       const qrReader = document.getElementById("qr-reader");
-      qrReader.style.display = "block";
 
-      html5QrCode = new Html5Qrcode("qr-reader");
+      if (!scanning) {
+        qrReader.style.display = "block";
+        html5QrCode = new Html5Qrcode("qr-reader");
 
-      try {
-        const cameras = await Html5Qrcode.getCameras();
-        if (cameras && cameras.length) {
-          let backCamera = cameras[cameras.length - 1].id;
-          await html5QrCode.start(
-            { deviceId: { exact: backCamera } },
-            { fps: 10, qrbox: 250 },
-            (decodedText) => {
-              showProduct(decodedText);
-              stopScan();
-            }
-          );
+        try {
+          const cameras = await Html5Qrcode.getCameras();
+          if (cameras && cameras.length) {
+            let backCamera = cameras[cameras.length - 1].id;
+            await html5QrCode.start(
+              { deviceId: { exact: backCamera } },
+              { fps: 10, qrbox: { width: 250, height: 250 } },
+              (decodedText) => {
+                showProduct(decodedText);
+                toggleScan(); // auto close after scan
+              }
+            );
+            scanning = true;
+          }
+        } catch (err) {
+          console.error("Camera error:", err);
+          alert("Unable to access camera: " + err);
         }
-      } catch (err) {
-        console.error("Camera error:", err);
-        alert("Unable to access camera: " + err);
-      }
-    }
-
-    async function stopScan() {
-      if (html5QrCode) {
-        await html5QrCode.stop();
-        html5QrCode.clear();
-        document.getElementById("qr-reader").style.display = "none";
+      } else {
+        if (html5QrCode) {
+          await html5QrCode.stop();
+          html5QrCode.clear();
+        }
+        qrReader.style.display = "none";
+        scanning = false;
       }
     }
   </script>
 </body>
 </html>
-
-
-
-
-
-

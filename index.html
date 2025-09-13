@@ -124,7 +124,7 @@
     // Fetch inventory from Google Sheets JSON
     async function loadInventory() {
       try {
-        const res = await fetch("https://opensheet.elk.sh/1O0vlldmzxvOqJQ5Ko9OqmVLrk-RjGUilxVSnwKmuvXc/0");
+        const res = await fetch("https://opensheet.elk.sh/1O0vlldmzxvOqJQ5Ko9OqmVLrk-RjGUilxVSnwKmuvXc/1");
         const data = await res.json();
         inventory = data.map(item => ({
           barcode: (item["Barcode "] || "").trim(),
@@ -148,25 +148,24 @@
 
     // Search function (barcode OR product name initials matching)
     function searchProducts(query) {
-  query = query.toLowerCase().trim();
-  if (!query) return [];
+      query = query.toLowerCase().trim();
+      if (!query) return [];
 
-  // If numeric only → search barcode
-  if (/^\d+$/.test(query)) {
-    return inventory.filter(p => p.barcode === query);
-  }
+      // If numeric → search barcode
+      if (/^\d+$/.test(query)) {
+        return inventory.filter(p => p.barcode === query);
+      }
 
-  const queryParts = query.split(/\s+/); // e.g. ["do","sh","20"]
+      // Else search by product name using initials
+      const parts = query.split(/\s+/); // ["do","sh","20"]
+      return inventory.filter(p => {
+        const nameParts = p.name.toLowerCase().split(/\s+/); // ["dove","shampoo","200ml"]
 
-  return inventory.filter(p => {
-    const nameParts = p.name.toLowerCase().split(/\s+/); // e.g. ["dove","shampoo","200ml"]
-
-    return queryParts.every((qPart, i) => {
-      if (!nameParts[i]) return false;
-      return nameParts[i].startsWith(qPart);
-    });
-  });
-}
+        return parts.every((qPart, i) => {
+          return nameParts[i] && nameParts[i].startsWith(qPart);
+        });
+      });
+    }
 
     // Render results
     function renderResults(products, query) {

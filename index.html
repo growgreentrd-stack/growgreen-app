@@ -41,7 +41,7 @@
       max-width: 300px;
       border: 1px solid #ccc;
       border-radius: 5px;
-      margin-bottom: 12px; /* ✅ Added spacing below input */
+      margin-bottom: 12px;
     }
 
     button {
@@ -66,7 +66,7 @@
       border-radius: 12px;
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
       display: none;
-      text-align: center;
+      text-align: left;
     }
 
     #result h3 {
@@ -75,24 +75,39 @@
       padding-bottom: 5px;
     }
 
+    /* Layout: details left, image + price right */
+    .cardContent {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 15px;
+    }
+
+    .details-left {
+      flex: 2;
+    }
+
+    .image-right {
+      flex: 1;
+      text-align: center;
+    }
+
     #productImage {
-      width: 90px;
+      width: 100px;
       height: auto;
       margin-bottom: 8px;
+      border-radius: 8px;
     }
 
     .priceHighlight {
-      font-size: 22px;
+      font-size: 20px;
       font-weight: bold;
       color: #1a8917;
-      margin-bottom: 12px;
     }
 
     #result .row {
       display: flex;
-      justify-content: flex-start;
       padding: 4px 0;
-      text-align: left;
     }
 
     #result .row span.label {
@@ -100,14 +115,14 @@
       font-weight: bold;
     }
 
-    /* Stylish scanner frame */
+    /* Scanner portion – adjustable size and border */
     #qr-reader {
       width: 100%;
       max-width: 350px;
-      height: 250px;
+      height: 260px;
       margin: 20px auto;
-      border: 4px solid #1a8917;
-      border-radius: 20px;
+      border: 4px solid #1a8917; /* change thickness + color */
+      border-radius: 18px;        /* rounded corners */
       overflow: hidden;
       display: none;
     }
@@ -130,7 +145,7 @@
   <main>
     <!-- Search box -->
     <div class="search-box">
-      <input type="text" id="searchInput" placeholder="Enter Barcode" />
+      <input type="text" id="searchInput" placeholder="Enter Barcode or Product Name" />
       <br />
       <button onclick="searchProduct()">Search</button>
       <button onclick="toggleScan()">Scan</button>
@@ -141,10 +156,14 @@
 
     <!-- Product result -->
     <div id="result">
-      <h3>Product Details</h3>
-      <img id="productImage" src="" alt="Product Image" style="display:none;" />
-      <div class="priceHighlight" id="productPrice"></div>
-      <div id="details"></div>
+      <h3 id="cardHeading">Product Details</h3>
+      <div class="cardContent">
+        <div class="details-left" id="details"></div>
+        <div class="image-right">
+          <img id="productImage" src="" alt="Product Image" style="display:none;" />
+          <div class="priceHighlight" id="productPrice"></div>
+        </div>
+      </div>
     </div>
   </main>
 
@@ -173,6 +192,7 @@
 
           if (cleanedRow.Barcode) {
             inventory[cleanedRow.Barcode] = {
+              code: cleanedRow["Product Code"] || "",
               name: cleanedRow["Product Name"] || "",
               qty: cleanedRow["Qty"] || "",
               unit: cleanedRow["Unit"] || "",
@@ -180,7 +200,7 @@
               mrp: cleanedRow["MRP"] || "",
               brand: cleanedRow["Brand"] || "",
               usage: cleanedRow["Usage"] || "",
-              image: cleanedRow["Image"] || "" // ✅ If you add image column in sheet
+              image: cleanedRow["Image"] || ""
             };
           }
         });
@@ -203,8 +223,13 @@
       const details = document.getElementById("details");
       const productImage = document.getElementById("productImage");
       const productPrice = document.getElementById("productPrice");
+      const heading = document.getElementById("cardHeading");
 
       if (product) {
+        // Heading with product code
+        heading.innerHTML = `Product Details <span style="color:#1a8917; font-size:14px;">Code: ${product.code}</span>`;
+
+        // Image
         if (product.image) {
           productImage.src = product.image;
           productImage.style.display = "block";
@@ -212,8 +237,10 @@
           productImage.style.display = "none";
         }
 
+        // Price
         productPrice.innerText = product.mrp ? `﷼ ${product.mrp}` : "";
 
+        // Details left
         details.innerHTML = `
           <div class="row"><span class="label">Name:</span> <span>${formatText(product.name)}</span></div>
           <div class="row"><span class="label">Qty:</span> <span>${product.qty}</span></div>
@@ -224,6 +251,7 @@
         `;
         resultBox.style.display = "block";
       } else {
+        heading.innerHTML = "Product Details";
         details.innerHTML = `<div class="row">No product found for code: ${code}</div>`;
         productImage.style.display = "none";
         productPrice.innerText = "";
@@ -231,13 +259,36 @@
       }
     }
 
+    // Flexible search: barcode OR product name with partial multi-word match
     function searchProduct() {
-      const code = document.getElementById("searchInput").value.trim();
-      if (code) {
-        showProduct(code);
+      const query = document.getElementById("searchInput").value.trim().toLowerCase();
+      if (!query) return;
+
+      // If exact barcode
+      if (inventory[query]) {
+        showProduct(query);
+        return;
+      }
+
+      const terms = query.split(/\s+/);
+      const results = Object.values(inventory).filter(product => {
+        const words = (product.name || "").toLowerCase().split(/\s+/);
+        return terms.every((t, i) =>
+          words[i] && words[i].startsWith(t)
+        );
+      });
+
+      if (results.length > 0) {
+        // Show first match
+        const barcode = Object.keys(inventory).find(bc => inventory[bc] === results[0]);
+        showProduct(barcode);
+      } else {
+        document.getElementById("details").innerHTML = `<div class="row">No product found for: ${query}</div>`;
+        document.getElementById("result").style.display = "block";
       }
     }
 
+    // Scanner open/close
     async function toggleScan() {
       const qrReader = document.getElementById("qr-reader");
 
@@ -251,10 +302,10 @@
             let backCamera = cameras[cameras.length - 1].id;
             await html5QrCode.start(
               { deviceId: { exact: backCamera } },
-              { fps: 10, qrbox: { width: 250, height: 250 } },
+              { fps: 10, qrbox: { width: 220, height: 220 } },
               (decodedText) => {
                 showProduct(decodedText);
-                toggleScan(); // auto close after scan
+                toggleScan(); // auto close
               }
             );
             scanning = true;
